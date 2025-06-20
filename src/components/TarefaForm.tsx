@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { criarTarefa } from "@/services/api";
+import { criarTarefa, TarefaResponseDTO } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +9,7 @@ import { StatusTarefa } from "@/services/api";
 
 interface TarefaFormProps {
   grupoId: number;
-  onTarefaCriada: () => void;
+  onTarefaCriada: (novaTarefa: TarefaResponseDTO) => void;
   onClose: () => void;
 }
 
@@ -29,11 +29,16 @@ export default function TarefaForm({
     setLoading(true);
 
     try {
-      await criarTarefa({ grupoId, titulo, descricao, status });
+      const tarefaCriada = await criarTarefa({
+        grupoId,
+        titulo,
+        descricao,
+        status,
+      });
       setTitulo("");
       setDescricao("");
       setStatus("PENDENTE");
-      onTarefaCriada();
+      onTarefaCriada(tarefaCriada);
       onClose();
     } catch (err) {
       console.error("Erro ao criar tarefa:", err);

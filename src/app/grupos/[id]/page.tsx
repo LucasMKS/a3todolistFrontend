@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+// REMOVED: import { useParams } from "next/navigation"; // This import is no longer needed
 import { motion, AnimatePresence } from "framer-motion";
 import {
   listarTarefasPorGrupo,
@@ -46,8 +47,12 @@ import { Trash2, UserPlus, ListPlus, Users } from "lucide-react";
 
 interface GrupoPageProps {
   params: {
-    id: string;
+    id: string; // `id` will be a string from the URL segment
   };
+  // Next.js page components also implicitly receive `searchParams` as part of `PageProps`
+  // although you might not be using it here. The type checker expects it.
+  // Adding it explicitly can sometimes help if the error persists due to strictness:
+  // searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 const formatStatus = (status: string): string => {
@@ -64,7 +69,9 @@ const formatStatus = (status: string): string => {
 };
 
 export default function GrupoPage({ params }: GrupoPageProps) {
-  const grupoId = Number(params.id);
+  // const { id: grupoIdParam } = useParams(); // REMOVED: No longer get params this way.
+                                              // The `params` prop already contains `id`.
+  const grupoId = Number(params.id); // Directly use params.id passed to the component
 
   // Estados para tarefas
   const [tarefas, setTarefas] = useState<TarefaResponseDTO[]>([]);
@@ -132,11 +139,14 @@ export default function GrupoPage({ params }: GrupoPageProps) {
   }
 
   useEffect(() => {
-    if (!isNaN(grupoId)) {
+    // Ensure grupoId is a valid number before fetching
+    // params.id is always a string, even if it represents a number.
+    // Number() conversion handles valid numbers and sets to NaN for invalid ones.
+    if (!isNaN(grupoId) && grupoId > 0) { // Add grupoId > 0 check for safety
       fetchTarefas();
       fetchUsuarios();
     }
-  }, [grupoId]);
+  }, [grupoId]); // Dependency array should include grupoId
 
   // Adicionar usuário ao grupo
   async function handleAdicionarUsuario() {
@@ -244,7 +254,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="p-4  bg-white shadow-md rounded-lg border border-gray-200">
+      <Card className="p-4 bg-white shadow-md rounded-lg border border-gray-200">
         {editandoId === tarefa.id ? (
           <>
             <Input
@@ -252,7 +262,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
               onChange={(e) =>
                 setFormEdicao((f) => ({ ...f, titulo: e.target.value }))
               }
-              className="text-lg font-semibold"
+              className="text-lg font-semibold mb-2"
               placeholder="Título da tarefa"
             />
             <Textarea
@@ -262,6 +272,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
               }
               placeholder="Descrição da tarefa (opcional)"
               rows={3}
+              className="mb-2"
             />
             <Select
               value={formEdicao.status}
@@ -272,7 +283,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
                 }))
               }
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full mb-4">
                 <SelectValue placeholder="Selecione o status" />
               </SelectTrigger>
               <SelectContent>
@@ -281,7 +292,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
                 <SelectItem value="CONCLUIDA">Concluída</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex gap-2 mt-4 justify-end">
+            <div className="flex gap-2 justify-end">
               <Button
                 size="sm"
                 onClick={() =>
@@ -306,14 +317,16 @@ export default function GrupoPage({ params }: GrupoPageProps) {
           </>
         ) : (
           <>
-            <h3 className="font-bold text-lg text-gray-800">{tarefa.titulo}</h3>
+            <h3 className="font-bold text-lg text-gray-800 mb-1">
+              {tarefa.titulo}
+            </h3>
             {tarefa.descricao && (
-              <p className="text-gray-600 text-sm leading-relaxed">
+              <p className="text-gray-600 text-sm leading-relaxed mb-2">
                 {tarefa.descricao}
               </p>
             )}
             <div
-              className={`text-xs font-medium px-2 py-1 rounded-full inline-block max-w-fit ${
+              className={`text-xs font-medium px-2 py-1 rounded-full inline-block max-w-fit mb-4 ${
                 tarefa.status === "PENDENTE"
                   ? "bg-gray-100 text-gray-700"
                   : tarefa.status === "EM_ANDAMENTO"
@@ -354,8 +367,6 @@ export default function GrupoPage({ params }: GrupoPageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
-      {" "}
-      {/* Changed background to a lighter gray */}
       <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
@@ -396,8 +407,6 @@ export default function GrupoPage({ params }: GrupoPageProps) {
           >
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                {" "}
-                {/* Stronger blue */}
                 <ListPlus className="h-5 w-5" /> Criar Nova Tarefa
               </Button>
             </DialogTrigger>
@@ -433,8 +442,6 @@ export default function GrupoPage({ params }: GrupoPageProps) {
                 variant="outline"
                 className="flex items-center gap-2 border-blue-500 text-blue-700 hover:bg-blue-50"
               >
-                {" "}
-                {/* Styled outline button */}
                 <Users className="h-5 w-5" /> Ver Membros
               </Button>
             </SheetTrigger>
@@ -448,8 +455,6 @@ export default function GrupoPage({ params }: GrupoPageProps) {
 
               {/* Adicionar novo membro - now within the Sheet */}
               <div className="p-4 border border-dashed border-blue-300 rounded-lg bg-blue-50 mb-6">
-                {" "}
-                {/* Blue dashed border and background */}
                 <h3 className="text-md font-semibold mb-3 flex items-center gap-2 text-blue-800">
                   <UserPlus className="h-4 w-4" /> Adicionar Novo Membro
                 </h3>
@@ -478,9 +483,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
                     disabled={loadingAdicionarUsuario}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                   >
-                    {loadingAdicionarUsuario
-                      ? "Adicionando..."
-                      : "Adicionar Membro"}
+                    {loadingAdicionarUsuario ? "Adicionando..." : "Adicionar Membro"}
                   </Button>
                 </div>
               </div>
@@ -559,8 +562,6 @@ export default function GrupoPage({ params }: GrupoPageProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Pending Column */}
             <div className="bg-white p-5 rounded-xl shadow-lg border border-gray-200 flex flex-col min-h-[300px]">
-              {" "}
-              {/* Changed border to a subtle gray */}
               <h2 className="text-2xl font-bold mb-5 text-center text-gray-800">
                 Pendente{" "}
                 <span className="text-gray-500 text-lg">
@@ -581,8 +582,6 @@ export default function GrupoPage({ params }: GrupoPageProps) {
 
             {/* In Progress Column */}
             <div className="bg-white p-5 rounded-xl shadow-lg border border-blue-200 flex flex-col min-h-[300px]">
-              {" "}
-              {/* Changed border to a subtle blue */}
               <h2 className="text-2xl font-bold mb-5 text-center text-blue-700">
                 Em Andamento{" "}
                 <span className="text-blue-500 text-lg">
@@ -603,8 +602,6 @@ export default function GrupoPage({ params }: GrupoPageProps) {
 
             {/* Completed Column */}
             <div className="bg-white p-5 rounded-xl shadow-lg border border-green-200 flex flex-col min-h-[300px]">
-              {" "}
-              {/* Changed border to a subtle green */}
               <h2 className="text-2xl font-bold mb-5 text-center text-green-700">
                 Concluída{" "}
                 <span className="text-green-500 text-lg">

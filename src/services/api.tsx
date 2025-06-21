@@ -24,7 +24,7 @@ function obterTokenValido(): string | null {
 
 const api = axios.create({
   baseURL:
-    "https://legendary-space-memory-7v94gvgvrw92wwr-8080.app.github.dev/api",
+    "https://a3todolist-production.up.railway.app/api",
 });
 
 api.interceptors.request.use((config) => {

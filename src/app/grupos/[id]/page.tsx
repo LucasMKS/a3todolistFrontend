@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-// REMOVED: import { useParams } from "next/navigation"; // This import is no longer needed
 import { motion, AnimatePresence } from "framer-motion";
 import {
   listarTarefasPorGrupo,
@@ -46,13 +45,9 @@ import TarefaForm from "@/components/TarefaForm";
 import { Trash2, UserPlus, ListPlus, Users } from "lucide-react";
 
 interface GrupoPageProps {
-  params: {
-    id: string; // `id` will be a string from the URL segment
-  };
-  // Next.js page components also implicitly receive `searchParams` as part of `PageProps`
-  // although you might not be using it here. The type checker expects it.
-  // Adding it explicitly can sometimes help if the error persists due to strictness:
-  // searchParams?: { [key: string]: string | string[] | undefined };
+  params: Promise<{
+    id: string;
+  }>;
 }
 
 const formatStatus = (status: string): string => {
@@ -69,9 +64,7 @@ const formatStatus = (status: string): string => {
 };
 
 export default function GrupoPage({ params }: GrupoPageProps) {
-  // const { id: grupoIdParam } = useParams(); // REMOVED: No longer get params this way.
-                                              // The `params` prop already contains `id`.
-  const grupoId = Number(params.id); // Directly use params.id passed to the component
+  const [grupoId, setGrupoId] = useState<number | null>(null);
 
   // Estados para tarefas
   const [tarefas, setTarefas] = useState<TarefaResponseDTO[]>([]);
@@ -90,7 +83,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
 
   // Novo usuário para o Dialog
   const [emailNovoUsuario, setEmailNovoUsuario] = useState("");
-  const [funcaoNovoUsuario, setFuncaoNovoUsuario] = useState("USER"); // Default role set
+  const [funcaoNovoUsuario, setFuncaoNovoUsuario] = useState("USER");
 
   const [loadingAdicionarUsuario, setLoadingAdicionarUsuario] = useState(false);
 
@@ -110,8 +103,18 @@ export default function GrupoPage({ params }: GrupoPageProps) {
     status: "PENDENTE",
   });
 
+  // Initialize grupoId from params
+  useEffect(() => {
+    params.then((resolvedParams) => {
+      const id = Number(resolvedParams.id);
+      setGrupoId(id);
+    });
+  }, [params]);
+
   // Buscar tarefas
   async function fetchTarefas() {
+    if (grupoId === null) return;
+
     setLoading(true);
     setErro(null);
     try {
@@ -126,6 +129,8 @@ export default function GrupoPage({ params }: GrupoPageProps) {
 
   // Buscar usuários
   async function fetchUsuarios() {
+    if (grupoId === null) return;
+
     setLoadingUsuario(true);
     setErroUsuario(null);
     try {
@@ -139,17 +144,16 @@ export default function GrupoPage({ params }: GrupoPageProps) {
   }
 
   useEffect(() => {
-    // Ensure grupoId is a valid number before fetching
-    // params.id is always a string, even if it represents a number.
-    // Number() conversion handles valid numbers and sets to NaN for invalid ones.
-    if (!isNaN(grupoId) && grupoId > 0) { // Add grupoId > 0 check for safety
+    if (grupoId !== null && !isNaN(grupoId)) {
       fetchTarefas();
       fetchUsuarios();
     }
-  }, [grupoId]); // Dependency array should include grupoId
+  }, [grupoId]);
 
   // Adicionar usuário ao grupo
   async function handleAdicionarUsuario() {
+    if (grupoId === null) return;
+
     if (!emailNovoUsuario.trim()) {
       alert("Informe o e-mail do usuário");
       return;
@@ -163,7 +167,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
         funcao: funcaoNovoUsuario.trim(),
       });
       setEmailNovoUsuario("");
-      setFuncaoNovoUsuario("USER"); // Reset to default
+      setFuncaoNovoUsuario("USER");
       await fetchUsuarios();
       alert("Usuário adicionado com sucesso!");
     } catch (e: any) {
@@ -175,6 +179,8 @@ export default function GrupoPage({ params }: GrupoPageProps) {
 
   // Remover usuário do grupo
   async function handleRemoverUsuario(usuarioId: number, usuarioNome: string) {
+    if (grupoId === null) return;
+
     if (confirm(`Tem certeza que deseja remover ${usuarioNome} deste grupo?`)) {
       setLoadingUsuario(true);
       setErroUsuario(null);
@@ -195,6 +201,8 @@ export default function GrupoPage({ params }: GrupoPageProps) {
     id: number,
     updatedFields: { titulo: string; descricao: string; status: StatusTarefa }
   ) {
+    if (grupoId === null) return;
+
     setLoadingAtualizacao(true);
     try {
       const payload: TarefaRequestDTO = {
@@ -220,7 +228,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
     if (confirm("Deseja realmente excluir esta tarefa?")) {
       try {
         await deletarTarefa(id);
-        fetchTarefas(); // Re-fetch all tasks to ensure consistency
+        fetchTarefas();
       } catch (err) {
         console.error("Erro ao excluir tarefa", err);
       }
@@ -254,7 +262,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="p-4 bg-white shadow-md rounded-lg border border-gray-200">
+      <Card className="p-4  bg-white shadow-md rounded-lg border border-gray-200">
         {editandoId === tarefa.id ? (
           <>
             <Input
@@ -262,7 +270,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
               onChange={(e) =>
                 setFormEdicao((f) => ({ ...f, titulo: e.target.value }))
               }
-              className="text-lg font-semibold mb-2"
+              className="text-lg font-semibold"
               placeholder="Título da tarefa"
             />
             <Textarea
@@ -272,7 +280,6 @@ export default function GrupoPage({ params }: GrupoPageProps) {
               }
               placeholder="Descrição da tarefa (opcional)"
               rows={3}
-              className="mb-2"
             />
             <Select
               value={formEdicao.status}
@@ -283,7 +290,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
                 }))
               }
             >
-              <SelectTrigger className="w-full mb-4">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione o status" />
               </SelectTrigger>
               <SelectContent>
@@ -292,7 +299,7 @@ export default function GrupoPage({ params }: GrupoPageProps) {
                 <SelectItem value="CONCLUIDA">Concluída</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-2 mt-4 justify-end">
               <Button
                 size="sm"
                 onClick={() =>
@@ -317,16 +324,14 @@ export default function GrupoPage({ params }: GrupoPageProps) {
           </>
         ) : (
           <>
-            <h3 className="font-bold text-lg text-gray-800 mb-1">
-              {tarefa.titulo}
-            </h3>
+            <h3 className="font-bold text-lg text-gray-800">{tarefa.titulo}</h3>
             {tarefa.descricao && (
-              <p className="text-gray-600 text-sm leading-relaxed mb-2">
+              <p className="text-gray-600 text-sm leading-relaxed">
                 {tarefa.descricao}
               </p>
             )}
             <div
-              className={`text-xs font-medium px-2 py-1 rounded-full inline-block max-w-fit mb-4 ${
+              className={`text-xs font-medium px-2 py-1 rounded-full inline-block max-w-fit ${
                 tarefa.status === "PENDENTE"
                   ? "bg-gray-100 text-gray-700"
                   : tarefa.status === "EM_ANDAMENTO"
@@ -364,6 +369,15 @@ export default function GrupoPage({ params }: GrupoPageProps) {
       </Card>
     </motion.div>
   );
+
+  // Show loading state while params are being resolved
+  if (grupoId === null) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center">
+        <p className="text-lg text-gray-600">Carregando...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100">
@@ -483,7 +497,9 @@ export default function GrupoPage({ params }: GrupoPageProps) {
                     disabled={loadingAdicionarUsuario}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                   >
-                    {loadingAdicionarUsuario ? "Adicionando..." : "Adicionar Membro"}
+                    {loadingAdicionarUsuario
+                      ? "Adicionando..."
+                      : "Adicionar Membro"}
                   </Button>
                 </div>
               </div>

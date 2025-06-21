@@ -1,12 +1,34 @@
 import axios from "axios";
 
+function salvarToken(token: string) {
+  const expiraEm = Date.now() + 24 * 60 * 60 * 1000; // 24h
+  localStorage.setItem("token", token);
+  localStorage.setItem("token_expira_em", expiraEm.toString());
+}
+
+function obterTokenValido(): string | null {
+  const token = localStorage.getItem("token");
+  const expiraEm = localStorage.getItem("token_expira_em");
+
+  if (!token || !expiraEm) return null;
+
+  const agora = Date.now();
+  if (agora > Number(expiraEm)) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("token_expira_em");
+    return null;
+  }
+
+  return token;
+}
+
 const api = axios.create({
   baseURL:
     "https://legendary-space-memory-7v94gvgvrw92wwr-8080.app.github.dev/api",
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = obterTokenValido();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -55,11 +77,15 @@ interface AdicionarUsuarioGrupoRequest {
 
 export const login = async (email: string, senha: string) => {
   const response = await api.post("/auth/login", { email, senha });
+  const { token } = response.data;
+  if (token) salvarToken(token);
   return response.data;
 };
 
 export const register = async (nome: string, email: string, senha: string) => {
   const response = await api.post("/auth/register", { nome, email, senha });
+  const { token } = response.data;
+  if (token) salvarToken(token);
   return response.data;
 };
 
